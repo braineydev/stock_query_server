@@ -76,4 +76,3 @@ The frontend will run on `http://localhost:3000`
 ## License
 
 MIT
->>>>>>> 12e4fe2 (Initial commit from local workspace)
