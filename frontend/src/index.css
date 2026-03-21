@@ -1,0 +1,72 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-base: #f8fafc;
+  --text-base: #0f172a;
+  --surface: #ffffff;
+  --surface-2: #f8fafc;
+  --muted: #64748b;
+  --border: #cbd5e1;
+  --primary: #3b82f6;
+  --header: rgba(255, 255, 255, 0.7);
+  --card: #ffffff;
+  --card-border: #e2e8f0;
+  --card-muted: #6b7280;
+}
+
+.theme-dark {
+  --bg-base: #060b1b;
+  --text-base: #e2e8f0;
+  --surface: #0b1224;
+  --surface-2: #0f172a;
+  --muted: #94a3b8;
+  --border: #334155;
+  --primary: #60a5fa;
+  --header: rgba(8, 13, 26, 0.8);
+  --card: #0d162b;
+  --card-border: #2e3a56;
+  --card-muted: #94a3b8;
+}
+
+body {
+  background-color: var(--bg-base);
+  color: var(--text-base);
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu",
+    "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.card-style {
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  color: var(--text-base);
+}
+
+.card-muted {
+  color: var(--card-muted);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--bg-base);
+  color: var(--text-base);
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu",
+    "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family:
+    source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
+}
