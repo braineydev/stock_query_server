@@ -92,7 +92,7 @@ const Layout = () => {
         className={`w-64 flex flex-col shadow-2xl flex-shrink-0 border-r z-20 transition-all ${
           isDark
             ? "bg-[#0B1120] text-slate-300 border-slate-800"
-            : "bg-white text-slate-700 border-slate-200"
+            : "bg-[#0B1120] text-slate-300 border-slate-800"
         }`}
       >
         <div className="p-6 flex items-center gap-3">
@@ -101,7 +101,7 @@ const Layout = () => {
           </div>
           <span
             className={`text-lg font-bold tracking-tight leading-tight ${
-              isDark ? "text-white" : "text-slate-900"
+              isDark ? "text-white" : "text-white"
             }`}
           >
             Stock Query
@@ -124,7 +124,7 @@ const Layout = () => {
                           ? "bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-md shadow-blue-900/20 font-medium"
                           : isDark
                             ? "hover:bg-slate-800/50 hover:text-white text-slate-400"
-                            : "hover:bg-slate-100 hover:text-slate-900 text-slate-600"
+                            : "hover:bg-slate-800/50 hover:text-white text-slate-400"
                       }`
                     }
                   >
@@ -173,7 +173,11 @@ const Layout = () => {
           }`}
         >
           <div
-            className={`text-sm font-medium tracking-wide ${isDark ? "text-slate-300" : "text-slate-500"}`}
+            className={`text-sm font-medium tracking-wide ${
+              isDark
+                ? "text-slate-300"
+                : "text-slate-500"
+            }`}
           >
             Educational Algorithm Visualization Platform
           </div>
@@ -183,7 +187,7 @@ const Layout = () => {
               className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-semibold transition ${
                 isDark
                   ? "bg-slate-800 text-slate-100 border-slate-700 hover:bg-slate-700"
-                  : "bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200"
+                  : "bg-slate-800 text-slate-100 border-slate-700 hover:bg-slate-700"
               }`}
             >
               {isDark ? <Sun size={16} /> : <Moon size={16} />}
@@ -194,7 +198,7 @@ const Layout = () => {
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition ${
                 isDark
                   ? "bg-slate-800 text-slate-100 border border-slate-700 hover:bg-slate-700"
-                  : "bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200"
+                  : "bg-slate-800 text-slate-100 border border-slate-700 hover:bg-slate-700"
               }`}
             >
               <LogOut size={16} /> Logout
