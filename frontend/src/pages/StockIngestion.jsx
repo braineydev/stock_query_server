@@ -6,11 +6,14 @@ import {
   Database,
   PlusCircle,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { formatDateDisplay, parseDisplayDateToIso } from "../utils/date";
+
+const defaultStockOptions = ["AAPL", "MSFT", "TSLA"];
 
 const StockIngestion = () => {
   const [formData, setFormData] = useState({
-    stock_id: "",
+    stock_id: "AAPL",
     date: new Date().toISOString().split("T")[0],
     open_price: "",
     close_price: "",
@@ -18,6 +21,9 @@ const StockIngestion = () => {
     low_price: "",
     volume: "",
   });
+  const [displayDate, setDisplayDate] = useState(
+    formatDateDisplay(new Date().toISOString().split("T")[0]),
+  );
 
   const [records, setRecords] = useState([]);
   const [status, setStatus] = useState({
@@ -30,8 +36,39 @@ const StockIngestion = () => {
     key: "date",
     direction: "desc",
   });
+  const [availableStockIds, setAvailableStockIds] = useState(defaultStockOptions);
+
+  useEffect(() => {
+    const fetchAvailableStocks = async () => {
+      try {
+        const response = await axios.get("http://localhost:5000/api/stocks/summary");
+        const ids = Array.from(
+          new Set([...defaultStockOptions, ...Object.keys(response.data || {})]),
+        ).sort();
+        setAvailableStockIds(ids);
+        setFormData(prev => ({
+          ...prev,
+          stock_id: ids.includes(prev.stock_id) ? prev.stock_id : ids[0] || "AAPL",
+        }));
+      } catch (error) {
+        console.error("Failed to fetch stock IDs:", error);
+        setAvailableStockIds(defaultStockOptions);
+      }
+    };
+
+    fetchAvailableStocks();
+  }, []);
 
   const handleChange = e => {
+    if (e.target.name === "date") {
+      setDisplayDate(e.target.value);
+      setFormData({
+        ...formData,
+        date: parseDisplayDateToIso(e.target.value),
+      });
+      return;
+    }
+
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
@@ -72,136 +109,127 @@ const StockIngestion = () => {
 
   const handleSort = key => {
     let direction = "asc";
-    if (sortConfig.key === key && sortConfig.direction === "asc")
+    if (sortConfig.key === key && sortConfig.direction === "asc") {
       direction = "desc";
+    }
     setSortConfig({ key, direction });
   };
 
   const sortedRecords = [...records].sort((a, b) => {
-    if (a[sortConfig.key] < b[sortConfig.key])
+    if (a[sortConfig.key] < b[sortConfig.key]) {
       return sortConfig.direction === "asc" ? -1 : 1;
-    if (a[sortConfig.key] > b[sortConfig.key])
+    }
+    if (a[sortConfig.key] > b[sortConfig.key]) {
       return sortConfig.direction === "asc" ? 1 : -1;
+    }
     return 0;
   });
 
-  // Premium Fintech Input Classes
   const inputBase =
-    "w-full bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 p-3 transition-all shadow-sm";
+    "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 shadow-sm transition focus:border-sky-400 focus:outline-none focus:ring-4 focus:ring-sky-100";
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
-      {/* HEADER */}
-      <div>
-        <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
-          Data Ingestion Engine
-        </h1>
-        <p className="text-slate-500 font-medium mt-1">
-          Insert daily stock records directly into the O(1) Hash Map.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* --- FORM SECTION --- */}
-        <div className="lg:col-span-1 bg-white p-7 rounded-3xl shadow-sm border border-slate-200/60 transition-shadow hover:shadow-md h-fit">
-          <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
-            <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
-              <Database size={20} />
-            </div>
-            <h2 className="text-lg font-bold text-slate-900">Record Entry</h2>
+    <div className="mx-auto max-w-7xl space-y-8">
+      <section className="rounded-[32px] border border-slate-200/80 bg-[#fcfbf7] p-6 shadow-[0_24px_70px_rgba(15,23,42,0.08)]">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.22em] text-slate-400">
+              Ingestion Engine
+            </p>
+            <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-900 md:text-4xl">
+              Data Ingestion
+            </h1>
+            <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600">
+              Insert daily OHLCV records into the stock store with a calmer,
+              dashboard-style workflow.
+            </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <InfoBadge label="Structure" value="Hash Map" tone="sky" />
+            <InfoBadge label="Session Rows" value={`${records.length}`} tone="emerald" />
+            <InfoBadge label="Write Cost" value="O(1)" tone="violet" />
+          </div>
+        </div>
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-[380px_1fr]">
+        <div className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-100">
+          <div className="flex items-center gap-3">
+            <div className="rounded-2xl bg-[#eaf5ff] p-3">
+              <Database className="text-sky-700" size={20} />
+            </div>
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-400">
+                Record Entry
+              </p>
+              <h2 className="text-xl font-bold text-slate-900">New Candle</h2>
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit} className="mt-6 space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2">
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                <label className="mb-2 block text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
                   Stock ID
                 </label>
-                <input
+                <select
                   required
-                  type="text"
                   name="stock_id"
                   value={formData.stock_id}
                   onChange={handleChange}
-                  placeholder="e.g., AAPL"
-                  className={`${inputBase} uppercase font-semibold placeholder:font-normal placeholder:normal-case`}
-                />
+                  className={inputBase}
+                >
+                  {availableStockIds.map(stockId => (
+                    <option key={stockId} value={stockId}>
+                      {stockId}
+                    </option>
+                  ))}
+                </select>
               </div>
+
               <div className="col-span-2">
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                <label className="mb-2 block text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
                   Trade Date
                 </label>
                 <input
                   required
-                  type="date"
+                  type="text"
                   name="date"
-                  value={formData.date}
+                  value={displayDate}
                   onChange={handleChange}
+                  placeholder="dd/mm/yyyy"
+                  inputMode="numeric"
+                  pattern="\d{2}/\d{2}/\d{4}"
                   className={inputBase}
                 />
               </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                  Open
-                </label>
-                <input
-                  required
-                  type="number"
-                  step="0.01"
-                  name="open_price"
-                  value={formData.open_price}
-                  onChange={handleChange}
-                  placeholder="0.00"
-                  className={inputBase}
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                  Close
-                </label>
-                <input
-                  required
-                  type="number"
-                  step="0.01"
-                  name="close_price"
-                  value={formData.close_price}
-                  onChange={handleChange}
-                  placeholder="0.00"
-                  className={inputBase}
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                  High
-                </label>
-                <input
-                  required
-                  type="number"
-                  step="0.01"
-                  name="high_price"
-                  value={formData.high_price}
-                  onChange={handleChange}
-                  placeholder="0.00"
-                  className={inputBase}
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                  Low
-                </label>
-                <input
-                  required
-                  type="number"
-                  step="0.01"
-                  name="low_price"
-                  value={formData.low_price}
-                  onChange={handleChange}
-                  placeholder="0.00"
-                  className={inputBase}
-                />
-              </div>
+
+              {[
+                ["open_price", "Open"],
+                ["close_price", "Close"],
+                ["high_price", "High"],
+                ["low_price", "Low"],
+              ].map(([name, label]) => (
+                <div key={name}>
+                  <label className="mb-2 block text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
+                    {label}
+                  </label>
+                  <input
+                    required
+                    type="number"
+                    step="0.01"
+                    name={name}
+                    value={formData[name]}
+                    onChange={handleChange}
+                    placeholder="0.00"
+                    className={inputBase}
+                  />
+                </div>
+              ))}
+
               <div className="col-span-2">
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                <label className="mb-2 block text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
                   Volume
                 </label>
                 <input
@@ -219,19 +247,22 @@ const StockIngestion = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full mt-6 flex items-center justify-center gap-2 text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-100 font-semibold rounded-xl text-sm px-5 py-3.5 transition-all shadow-md shadow-blue-500/20 disabled:opacity-50 disabled:shadow-none active:scale-[0.98]"
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 py-3.5 text-sm font-semibold text-white shadow-lg transition hover:bg-slate-800 disabled:opacity-50"
             >
               <PlusCircle size={18} />
-              {isLoading ? "Ingesting to RAM..." : "Commit to Memory"}
+              {isLoading ? "Ingesting to Memory..." : "Commit Record"}
             </button>
           </form>
 
-          {/* STATUS MESSAGES */}
           {status.message && (
             <div
-              className={`mt-5 p-4 rounded-xl text-sm flex flex-col gap-2 border animate-in slide-in-from-bottom-2 ${status.type === "success" ? "bg-emerald-50 text-emerald-800 border-emerald-200" : "bg-rose-50 text-rose-800 border-rose-200"}`}
+              className={`mt-5 rounded-[24px] border p-4 text-sm ${
+                status.type === "success"
+                  ? "border-emerald-200 bg-[#ecfff1] text-emerald-800"
+                  : "border-rose-200 bg-[#fff5f5] text-rose-800"
+              }`}
             >
-              <div className="flex items-center gap-2 font-bold">
+              <div className="flex items-center gap-2 font-semibold">
                 {status.type === "success" ? (
                   <CheckCircle size={18} className="text-emerald-600" />
                 ) : (
@@ -240,7 +271,7 @@ const StockIngestion = () => {
                 {status.message}
               </div>
               {status.complexity && (
-                <div className="font-mono text-xs bg-white py-1.5 px-3 rounded-lg w-fit border shadow-sm mt-1">
+                <div className="mt-3 inline-flex rounded-full bg-white px-3 py-1.5 font-mono text-xs font-semibold ring-1 ring-black/5">
                   {status.complexity}
                 </div>
               )}
@@ -248,18 +279,24 @@ const StockIngestion = () => {
           )}
         </div>
 
-        {/* --- TABLE SECTION --- */}
-        <div className="lg:col-span-2 bg-white rounded-3xl shadow-sm border border-slate-200/60 overflow-hidden flex flex-col transition-shadow hover:shadow-md">
-          <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-            <h2 className="text-lg font-bold text-slate-900">Session Ledger</h2>
-            <span className="text-[11px] font-mono font-bold bg-slate-100 text-slate-600 px-3 py-1.5 rounded-md uppercase tracking-widest border border-slate-200">
-              Local State
-            </span>
+        <div className="rounded-[28px] bg-white shadow-sm ring-1 ring-slate-100">
+          <div className="flex flex-col gap-4 border-b border-slate-100 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-400">
+                Session Ledger
+              </p>
+              <h2 className="text-xl font-bold text-slate-900">
+                Recently Added Records
+              </h2>
+            </div>
+            <div className="rounded-full bg-[#f3f8ff] px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-sky-900">
+              Local Preview
+            </div>
           </div>
 
-          <div className="overflow-x-auto flex-1">
-            <table className="w-full text-sm text-left text-slate-600">
-              <thead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider bg-slate-50/50 border-b border-slate-100">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm text-slate-600">
+              <thead className="bg-slate-50/80 text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">
                 <tr>
                   {[
                     "Stock ID",
@@ -274,11 +311,11 @@ const StockIngestion = () => {
                     return (
                       <th
                         key={col}
-                        className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors"
+                        className="cursor-pointer px-6 py-4 transition hover:bg-slate-100"
                         onClick={() => handleSort(key)}
                       >
                         <div className="flex items-center gap-1.5">
-                          {col}{" "}
+                          {col}
                           <ArrowUpDown size={14} className="text-slate-400" />
                         </div>
                       </th>
@@ -289,19 +326,17 @@ const StockIngestion = () => {
               <tbody>
                 {sortedRecords.length === 0 ? (
                   <tr>
-                    <td
-                      colSpan="7"
-                      className="px-6 py-16 text-center text-slate-400"
-                    >
+                    <td colSpan="7" className="px-6 py-20 text-center">
                       <Database
                         size={40}
-                        className="mx-auto text-slate-200 mb-4 stroke-[1.5]"
+                        className="mx-auto mb-4 text-slate-200"
                       />
                       <p className="font-medium text-slate-500">
                         No data ingested in this session yet.
                       </p>
-                      <p className="text-xs mt-1">
-                        Submit the form to visualize O(1) storage.
+                      <p className="mt-1 text-xs text-slate-400">
+                        Submit the form to preview new rows in the dashboard
+                        ledger.
                       </p>
                     </td>
                   </tr>
@@ -309,22 +344,24 @@ const StockIngestion = () => {
                   sortedRecords.map(record => (
                     <tr
                       key={record.id}
-                      className="bg-white border-b border-slate-50 hover:bg-slate-50/80 transition-colors"
+                      className="border-t border-slate-100 bg-white transition hover:bg-[#fcfbf7]"
                     >
-                      <td className="px-6 py-4 font-extrabold text-slate-900 uppercase">
+                      <td className="px-6 py-4 font-bold uppercase text-slate-900">
                         {record.stock_id}
                       </td>
-                      <td className="px-6 py-4 font-medium">{record.date}</td>
-                      <td className="px-6 py-4 font-mono font-medium">
+                      <td className="px-6 py-4 font-medium">
+                        {formatDateDisplay(record.date)}
+                      </td>
+                      <td className="px-6 py-4 font-mono">
                         ${Number(record.open_price).toFixed(2)}
                       </td>
-                      <td className="px-6 py-4 font-mono font-bold text-slate-900">
+                      <td className="px-6 py-4 font-mono font-semibold text-slate-900">
                         ${Number(record.close_price).toFixed(2)}
                       </td>
-                      <td className="px-6 py-4 font-mono font-medium">
+                      <td className="px-6 py-4 font-mono">
                         ${Number(record.high_price).toFixed(2)}
                       </td>
-                      <td className="px-6 py-4 font-mono font-medium">
+                      <td className="px-6 py-4 font-mono">
                         ${Number(record.low_price).toFixed(2)}
                       </td>
                       <td className="px-6 py-4 font-mono text-slate-500">
@@ -337,7 +374,24 @@ const StockIngestion = () => {
             </table>
           </div>
         </div>
-      </div>
+      </section>
+    </div>
+  );
+};
+
+const InfoBadge = ({ label, value, tone }) => {
+  const tones = {
+    sky: "bg-[#eaf5ff] text-sky-900",
+    emerald: "bg-[#ecfff1] text-emerald-900",
+    violet: "bg-[#f3ecff] text-violet-900",
+  };
+
+  return (
+    <div className={`rounded-[24px] px-5 py-4 shadow-sm ${tones[tone]}`}>
+      <p className="text-xs font-semibold uppercase tracking-[0.16em] opacity-60">
+        {label}
+      </p>
+      <p className="mt-1 text-lg font-bold">{value}</p>
     </div>
   );
 };

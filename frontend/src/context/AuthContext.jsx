@@ -21,11 +21,12 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
-  const login = async (username, password) => {
+  const login = async (username, password, tenantId = "global") => {
     try {
       const response = await axios.post(`${API_BASE_URL}/api/auth/login`, {
         username,
         password,
+        tenant_id: tenantId,
       });
       const { token, user: userData } = response.data;
 
@@ -48,6 +49,26 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const switchTenant = async tenantId => {
+    try {
+      const response = await axios.post(`${API_BASE_URL}/api/admin/switch-tenant`, {
+        tenant_id: tenantId,
+      });
+      const { token, user: userData } = response.data;
+
+      localStorage.setItem("token", token);
+      localStorage.setItem("user", JSON.stringify(userData));
+      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+      setUser(userData);
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.error || "Tenant switch failed",
+      };
+    }
+  };
+
   const logout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
@@ -56,7 +77,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, logout, switchTenant, loading }}>
       {!loading && children}
     </AuthContext.Provider>
   );

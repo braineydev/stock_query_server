@@ -6,6 +6,7 @@ const Login = () => {
   const [credentials, setCredentials] = useState({
     username: "",
     password: "",
+    tenantId: "global",
   });
   const [error, setError] = useState("");
   const { login } = useAuth();
@@ -15,7 +16,11 @@ const Login = () => {
     e.preventDefault();
     setError("");
 
-    const result = await login(credentials);
+    const result = await login(
+      credentials.username,
+      credentials.password,
+      credentials.tenantId,
+    );
 
     if (result.success) {
       navigate("/dashboard");
@@ -25,15 +30,34 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600">
-      <div className="bg-white p-8 rounded-lg shadow-2xl w-full max-w-md">
-        <h1 className="text-3xl font-bold text-center mb-8 text-gray-800">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#0f172a] via-[#1d4ed8] to-[#14b8a6] px-4">
+      <div className="w-full max-w-md rounded-[28px] bg-white p-8 shadow-2xl">
+        <h1 className="mb-3 text-center text-3xl font-bold text-gray-800">
           SQS GMN Login
         </h1>
+        <p className="mb-8 text-center text-sm leading-6 text-slate-500">
+          Sign into your tenant-scoped analytics environment.
+        </p>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="mb-2 block text-sm font-medium text-gray-700">
+              Tenant ID
+            </label>
+            <input
+              type="text"
+              value={credentials.tenantId}
+              onChange={e =>
+                setCredentials({ ...credentials, tenantId: e.target.value })
+              }
+              className="w-full rounded-2xl border border-gray-300 px-4 py-3 focus:ring-2 focus:ring-blue-500"
+              placeholder="global"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-medium text-gray-700">
               Username
             </label>
             <input
@@ -42,13 +66,13 @@ const Login = () => {
               onChange={e =>
                 setCredentials({ ...credentials, username: e.target.value })
               }
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-2xl border border-gray-300 px-4 py-3 focus:ring-2 focus:ring-blue-500"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="mb-2 block text-sm font-medium text-gray-700">
               Password
             </label>
             <input
@@ -57,20 +81,20 @@ const Login = () => {
               onChange={e =>
                 setCredentials({ ...credentials, password: e.target.value })
               }
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-2xl border border-gray-300 px-4 py-3 focus:ring-2 focus:ring-blue-500"
               required
             />
           </div>
 
           {error && (
-            <div className="p-4 bg-red-100 text-red-700 rounded-lg">
+            <div className="rounded-2xl bg-red-100 p-4 text-red-700">
               {error}
             </div>
           )}
 
           <button
             type="submit"
-            className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
+            className="w-full rounded-2xl bg-blue-600 py-3 font-medium text-white transition hover:bg-blue-700"
           >
             Login
           </button>

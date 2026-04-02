@@ -8,6 +8,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { useTheme } from "../context/ThemeContext";
 import api from "../services/api";
+import { formatDateDisplay } from "../utils/date";
 
 const LiveMarketTicker = () => {
   const { theme } = useTheme();
@@ -15,8 +16,6 @@ const LiveMarketTicker = () => {
   const [marketData, setMarketData] = useState({});
   const [status, setStatus] = useState("LOADING");
   const [simDate, setSimDate] = useState("");
-
-  // We use a ref to remember previous prices for the green/red flash effect
   const prevPrices = useRef({});
 
   useEffect(() => {
@@ -25,12 +24,10 @@ const LiveMarketTicker = () => {
         const response = await api.get("/stocks/live");
         const newData = response.data.data;
 
-        // Update state with new data
         setMarketData(newData);
         setStatus(response.data.status);
         setSimDate(response.data.date);
 
-        // Update our ref for the NEXT tick comparison
         const currentPrices = {};
         Object.keys(newData).forEach(symbol => {
           currentPrices[symbol] = newData[symbol].close_price;
@@ -42,7 +39,6 @@ const LiveMarketTicker = () => {
       }
     };
 
-    // Fetch immediately, then poll every 3 seconds
     fetchLiveMarket();
     const interval = setInterval(fetchLiveMarket, 3000);
     return () => clearInterval(interval);
@@ -51,91 +47,104 @@ const LiveMarketTicker = () => {
   if (status === "LOADING" || status === "OFFLINE") return null;
 
   return (
-    <div
-      className={`rounded-xl shadow-lg border overflow-hidden mb-8 animate-fade-in-down card-style ${isDark ? "border-[var(--border)]" : "border-[var(--border)]"}`}
-    >
-      {/* Ticker Header */}
-      <div
-        className={`p-3 border-b flex items-center justify-between ${isDark ? "bg-[var(--surface)] border-[var(--border)]" : "bg-[var(--surface)] border-[var(--border)]"}`}
-      >
-        <div className="flex items-center gap-3">
-          <Activity
-            size={18}
-            className={
-              status === "OPEN"
-                ? "text-green-400 animate-pulse"
-                : "text-gray-500"
-            }
-          />
-          <h2 className="text-sm font-bold text-white tracking-widest uppercase">
-            Live RAM Ticker
-          </h2>
-          <span
-            className={`text-xs px-2 py-0.5 rounded font-mono ${status === "OPEN" ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}
-          >
-            MARKET {status}
-          </span>
+    <section className="space-y-4">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div>
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-400">
+            Featured Stocks
+          </p>
+          <h3 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">
+            Live market highlights
+          </h3>
         </div>
 
-        <div className="flex items-center gap-4 text-xs font-mono text-gray-400">
-          <div className="flex items-center gap-1.5">
-            <Clock size={14} /> Simulated Date: {simDate}
-          </div>
-          <div className="flex items-center gap-1.5 text-blue-400 bg-blue-500/10 px-2 py-1 rounded">
-            <Database size={14} /> Write-Behind Cache Active
-          </div>
+        <div className="flex flex-wrap items-center gap-3 text-sm">
+          <span className="inline-flex items-center gap-2 rounded-full bg-[#ecfff1] px-4 py-2 font-semibold text-emerald-800 shadow-sm">
+            <Activity size={15} className="text-emerald-600" />
+            Market {status}
+          </span>
+          <span className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 font-medium text-slate-600 shadow-sm ring-1 ring-slate-200">
+            <Clock size={15} className="text-slate-400" />
+            Simulated date {formatDateDisplay(simDate)}
+          </span>
         </div>
       </div>
 
-      {/* Ticker Tape (Stock Cards) */}
-      <div className="p-4 grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         {Object.keys(marketData).map(symbol => {
           const data = marketData[symbol];
           const currentPrice = data.close_price;
           const prevPrice = prevPrices.current[symbol] || currentPrice;
-
-          // Determine tick direction
           const isUp = currentPrice > prevPrice;
           const isDown = currentPrice < prevPrice;
-          const noChange = currentPrice === prevPrice;
-
-          // Dynamic colors based on the tick
-          let colorClass = "text-gray-300";
-          let bgClass = "bg-gray-800";
-          if (isUp) {
-            colorClass = "text-green-400";
-            bgClass = "bg-green-400/10 border-green-400/30";
-          }
-          if (isDown) {
-            colorClass = "text-red-400";
-            bgClass = "bg-red-400/10 border-red-400/30";
-          }
 
           return (
-            <div
+            <article
               key={symbol}
-              className={`flex flex-col p-3 rounded-lg border border-gray-700 transition-colors duration-500 ${bgClass}`}
+              className={`group relative overflow-hidden rounded-[28px] px-5 py-5 text-white shadow-[0_20px_60px_rgba(15,23,42,0.18)] transition duration-200 hover:-translate-y-1 ${
+                isDark
+                  ? "bg-[#101a2b]"
+                  : "bg-[#17181c]"
+              }`}
             >
-              <div className="flex justify-between items-center mb-1">
-                <span className="font-bold text-gray-200">{symbol}</span>
-                {isUp ? (
-                  <TrendingUp size={16} className="text-green-400" />
-                ) : isDown ? (
-                  <TrendingDown size={16} className="text-red-400" />
-                ) : null}
+              <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full border border-white/10" />
+              <div className="absolute -left-4 bottom-6 h-14 w-14 rounded-full bg-white/[0.03]" />
+              <div className="relative flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                    Asset
+                  </p>
+                  <h4 className="mt-1 text-2xl font-bold tracking-tight">
+                    {symbol}
+                  </h4>
+                </div>
+                <div
+                  className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                    isUp
+                      ? "bg-emerald-500/15 text-emerald-300"
+                      : isDown
+                        ? "bg-rose-500/15 text-rose-300"
+                        : "bg-white/10 text-slate-200"
+                  }`}
+                >
+                  {isUp ? "+ momentum" : isDown ? "- momentum" : "steady"}
+                </div>
               </div>
-              <div className={`text-xl font-mono font-medium ${colorClass}`}>
-                ${currentPrice.toFixed(2)}
+
+              <div className="relative mt-8 flex items-end justify-between">
+                <div>
+                  <div className="text-3xl font-bold tracking-tight">
+                    ${currentPrice.toFixed(2)}
+                  </div>
+                  <p className="mt-1 text-sm text-slate-400">
+                    Vol {(data.volume / 1000).toFixed(1)}k
+                  </p>
+                </div>
+                <div
+                  className={`flex h-11 w-11 items-center justify-center rounded-2xl ${
+                    isUp
+                      ? "bg-emerald-500/15 text-emerald-300"
+                      : isDown
+                        ? "bg-rose-500/15 text-rose-300"
+                        : "bg-white/10 text-slate-200"
+                  }`}
+                >
+                  {isUp ? <TrendingUp size={20} /> : <TrendingDown size={20} />}
+                </div>
               </div>
-              <div className="text-[10px] text-gray-500 font-mono mt-1 flex justify-between">
-                <span>Vol: {(data.volume / 1000).toFixed(1)}k</span>
-                <span>H: ${data.high_price.toFixed(2)}</span>
+
+              <div className="relative mt-6 flex items-center justify-between rounded-2xl bg-white/5 px-4 py-3 text-xs text-slate-300">
+                <span className="flex items-center gap-2">
+                  <Database size={14} className="text-slate-500" />
+                  High ${data.high_price.toFixed(2)}
+                </span>
+                <span>Low ${data.low_price.toFixed(2)}</span>
               </div>
-            </div>
+            </article>
           );
         })}
       </div>
-    </div>
+    </section>
   );
 };
 

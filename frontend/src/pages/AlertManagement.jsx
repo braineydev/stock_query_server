@@ -12,6 +12,8 @@ import {
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 
+const defaultStockOptions = ["AAPL", "MSFT", "TSLA"];
+
 const AlertManagement = () => {
   const { user } = useAuth();
   const normalizedRole = (user?.role || "").toUpperCase();
@@ -20,7 +22,7 @@ const AlertManagement = () => {
   );
 
   const [formData, setFormData] = useState({
-    stock_id: "",
+    stock_id: "AAPL",
     condition: "greater_than",
     threshold: "",
   });
@@ -29,12 +31,12 @@ const AlertManagement = () => {
   const [triggeredFeed, setTriggeredFeed] = useState([]);
   const [status, setStatus] = useState({ type: "", message: "", meta: "" });
   const [isLoading, setIsLoading] = useState(false);
+  const [availableStockIds, setAvailableStockIds] = useState(defaultStockOptions);
 
   const visibleAlerts = isAdminOrSuper
     ? configuredAlerts
     : configuredAlerts.filter(alert => alert.created_by === user?.username);
 
-  // Fetch both active configurations and the live feed
   const fetchAlertData = async () => {
     try {
       const response = await axios.get("http://localhost:5000/api/alerts");
@@ -45,11 +47,31 @@ const AlertManagement = () => {
     }
   };
 
-  // Initial load and polling for live feed updates
   useEffect(() => {
     fetchAlertData();
-    const interval = setInterval(fetchAlertData, 5000); // Poll every 5 seconds
+    const interval = setInterval(fetchAlertData, 5000);
     return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const fetchAvailableStocks = async () => {
+      try {
+        const response = await axios.get("http://localhost:5000/api/stocks/summary");
+        const ids = Array.from(
+          new Set([...defaultStockOptions, ...Object.keys(response.data || {})]),
+        ).sort();
+        setAvailableStockIds(ids);
+        setFormData(prev => ({
+          ...prev,
+          stock_id: ids.includes(prev.stock_id) ? prev.stock_id : ids[0] || "AAPL",
+        }));
+      } catch (error) {
+        console.error("Failed to fetch stock IDs:", error);
+        setAvailableStockIds(defaultStockOptions);
+      }
+    };
+
+    fetchAvailableStocks();
   }, []);
 
   const handleInputChange = e => {
@@ -81,9 +103,8 @@ const AlertManagement = () => {
         meta: response.data.meta?.complexity_note,
       });
 
-      // Reset form but keep stock_id for convenience
       setFormData({ ...formData, threshold: "" });
-      fetchAlertData(); // Refresh table immediately
+      fetchAlertData();
     } catch (error) {
       setStatus({
         type: "error",
@@ -95,55 +116,79 @@ const AlertManagement = () => {
     }
   };
 
-  return (
-    <div className="p-6 max-w-7xl mx-auto space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-3">
-          Alert Management (C3)
-          <span className="text-xs font-mono bg-orange-100 text-orange-800 px-2 py-1 rounded-full uppercase tracking-wider">
-            FIFO Queue System
-          </span>
-        </h1>
-        <p className="text-gray-500 mt-1">
-          Configure thresholds and monitor asynchronous, event-driven triggers.
-        </p>
-      </div>
+  const inputBase =
+    "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 shadow-sm transition focus:border-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-100";
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* --- LEFT COLUMN: CREATE ALERT FORM --- */}
-        <div className="lg:col-span-1 bg-white p-6 rounded-xl shadow-sm border border-gray-100 h-fit">
-          <div className="flex items-center gap-2 mb-6 pb-4 border-b border-gray-100">
-            <BellRing className="text-orange-500" size={24} />
-            <h2 className="text-lg font-semibold text-gray-800">
-              New Alert Target
-            </h2>
+  return (
+    <div className="mx-auto max-w-7xl space-y-8">
+      <section className="rounded-[32px] border border-slate-200/80 bg-[#fcfbf7] p-6 shadow-[0_24px_70px_rgba(15,23,42,0.08)]">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.22em] text-slate-400">
+              Queue Monitor
+            </p>
+            <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-900 md:text-4xl">
+              Alert Management
+            </h1>
+            <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600">
+              Configure threshold triggers and review queue-driven events in the
+              same visual language as the documentation dashboard.
+            </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <AlertBadge label="Mode" value="FIFO Queue" tone="amber" />
+            <AlertBadge label="Configured" value={`${visibleAlerts.length}`} tone="sky" />
+            <AlertBadge label="Feed Events" value={`${triggeredFeed.length}`} tone="emerald" />
+          </div>
+        </div>
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-[360px_1fr]">
+        <div className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-100">
+          <div className="flex items-center gap-3">
+            <div className="rounded-2xl bg-[#fff3e8] p-3">
+              <BellRing className="text-orange-700" size={20} />
+            </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-400">
+                New Alert
+              </p>
+              <h2 className="text-xl font-bold text-slate-900">
+                Create Threshold
+              </h2>
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+            <div>
+              <label className="mb-2 block text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
                 Stock ID
               </label>
-              <input
+              <select
                 required
-                type="text"
                 name="stock_id"
                 value={formData.stock_id}
                 onChange={handleInputChange}
-                placeholder="e.g., TSLA"
-                className="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-orange-500 focus:border-orange-500 p-2.5 uppercase"
-              />
+                className={inputBase}
+              >
+                {availableStockIds.map(stockId => (
+                  <option key={stockId} value={stockId}>
+                    {stockId}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="mb-2 block text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
                 Trigger Condition
               </label>
               <select
                 name="condition"
                 value={formData.condition}
                 onChange={handleInputChange}
-                className="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-orange-500 focus:border-orange-500 p-2.5"
+                className={inputBase}
               >
                 <option value="greater_than">Price Exceeds (&gt;)</option>
                 <option value="less_than">Price Drops Below (&lt;)</option>
@@ -151,8 +196,8 @@ const AlertManagement = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Threshold Price ($)
+              <label className="mb-2 block text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
+                Threshold Price
               </label>
               <input
                 required
@@ -162,35 +207,38 @@ const AlertManagement = () => {
                 value={formData.threshold}
                 onChange={handleInputChange}
                 placeholder="0.00"
-                className="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-orange-500 focus:border-orange-500 p-2.5"
+                className={inputBase}
               />
             </div>
 
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full mt-4 flex items-center justify-center gap-2 text-white bg-orange-600 hover:bg-orange-700 focus:ring-4 focus:ring-orange-300 font-medium rounded-lg text-sm px-5 py-2.5 transition-colors disabled:opacity-50"
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 py-3.5 text-sm font-semibold text-white shadow-lg transition hover:bg-slate-800 disabled:opacity-50"
             >
               <PlusCircle size={18} />
               {isLoading ? "Enqueuing Target..." : "Create Alert"}
             </button>
           </form>
 
-          {/* Form Status */}
           {status.message && (
             <div
-              className={`mt-4 p-4 rounded-lg text-sm flex flex-col gap-2 ${status.type === "success" ? "bg-green-50 text-green-800" : "bg-red-50 text-red-800"}`}
+              className={`mt-5 rounded-[24px] border p-4 text-sm ${
+                status.type === "success"
+                  ? "border-emerald-200 bg-[#ecfff1] text-emerald-800"
+                  : "border-rose-200 bg-[#fff5f5] text-rose-800"
+              }`}
             >
-              <div className="flex items-center gap-2 font-medium">
+              <div className="flex items-center gap-2 font-semibold">
                 {status.type === "success" ? (
-                  <CheckCircle size={18} />
+                  <CheckCircle size={18} className="text-emerald-600" />
                 ) : (
-                  <AlertTriangle size={18} />
+                  <AlertTriangle size={18} className="text-rose-600" />
                 )}
                 {status.message}
               </div>
               {status.meta && (
-                <div className="font-mono text-xs bg-white/50 py-1 px-2 rounded w-fit border border-green-200">
+                <div className="mt-3 inline-flex rounded-full bg-white px-3 py-1.5 font-mono text-xs font-semibold ring-1 ring-black/5">
                   {status.meta}
                 </div>
               )}
@@ -198,24 +246,26 @@ const AlertManagement = () => {
           )}
         </div>
 
-        {/* --- RIGHT COLUMN: TABLES AND FEEDS --- */}
-        <div className="lg:col-span-2 flex flex-col gap-6">
-          {/* Configured Alerts Table */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="p-5 border-b border-gray-100 flex items-center justify-between bg-gray-50">
-              <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                <List size={18} className="text-gray-500" /> Configured Alerts
+        <div className="space-y-6">
+          <div className="overflow-hidden rounded-[28px] bg-white shadow-sm ring-1 ring-slate-100">
+            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5">
+              <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-900">
+                <List size={18} className="text-slate-500" />
+                Configured Alerts
               </h2>
+              <span className="rounded-full bg-[#f3f8ff] px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-sky-900">
+                Active Thresholds
+              </span>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left text-gray-500">
-                <thead className="text-xs text-gray-700 uppercase bg-white border-b border-gray-100">
+              <table className="w-full text-left text-sm text-slate-600">
+                <thead className="bg-slate-50/80 text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">
                   <tr>
-                    <th className="px-6 py-3">Stock ID</th>
-                    <th className="px-6 py-3">Condition</th>
-                    <th className="px-6 py-3">Threshold</th>
-                    <th className="px-6 py-3">Status</th>
-                    {isAdminOrSuper && <th className="px-6 py-3">Owner</th>}
+                    <th className="px-6 py-4">Stock ID</th>
+                    <th className="px-6 py-4">Condition</th>
+                    <th className="px-6 py-4">Threshold</th>
+                    <th className="px-6 py-4">Status</th>
+                    {isAdminOrSuper && <th className="px-6 py-4">Owner</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -223,7 +273,7 @@ const AlertManagement = () => {
                     <tr>
                       <td
                         colSpan={isAdminOrSuper ? "5" : "4"}
-                        className="px-6 py-8 text-center text-gray-500"
+                        className="px-6 py-16 text-center text-slate-500"
                       >
                         No active alerts configured for your account.
                       </td>
@@ -232,12 +282,12 @@ const AlertManagement = () => {
                     visibleAlerts.map((alert, idx) => (
                       <tr
                         key={idx}
-                        className="bg-white border-b hover:bg-gray-50"
+                        className="border-t border-slate-100 bg-white transition hover:bg-[#fcfbf7]"
                       >
-                        <td className="px-6 py-4 font-bold text-gray-900">
+                        <td className="px-6 py-4 font-bold text-slate-900">
                           {alert.stock_id}
                         </td>
-                        <td className="px-6 py-4 font-mono text-xs">
+                        <td className="px-6 py-4 font-mono text-xs text-slate-500">
                           {alert.condition === "greater_than"
                             ? "> (EXCEEDS)"
                             : "< (DROPS BELOW)"}
@@ -247,19 +297,21 @@ const AlertManagement = () => {
                         </td>
                         <td className="px-6 py-4">
                           <span
-                            className={`px-2 py-1 rounded text-xs font-medium ${
+                            className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] ${
                               alert.status === "active"
-                                ? "bg-blue-100 text-blue-800"
-                                : "bg-green-100 text-green-800"
+                                ? "bg-[#eef4ff] text-sky-800"
+                                : "bg-[#ecfff1] text-emerald-800"
                             }`}
                           >
-                            {alert.status.toUpperCase()}
+                            {alert.status}
                           </span>
                         </td>
                         {isAdminOrSuper && (
-                          <td className="px-6 py-4 flex items-center gap-2">
-                            <UserIcon size={14} className="text-gray-400" />
-                            {alert.created_by}
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-2">
+                              <UserIcon size={14} className="text-slate-400" />
+                              {alert.created_by}
+                            </div>
                           </td>
                         )}
                       </tr>
@@ -270,44 +322,41 @@ const AlertManagement = () => {
             </div>
           </div>
 
-          {/* Live Triggered Feed (Queue Visualization) */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex-1">
-            <div className="p-5 border-b border-gray-100 flex items-center justify-between bg-gray-900 text-white">
-              <h2 className="text-lg font-semibold flex items-center gap-2">
-                <Activity size={18} className="text-orange-400" /> Live Trigger
-                Feed
+          <div className="relative overflow-hidden rounded-[28px] bg-[#171717] text-white shadow-[0_26px_60px_rgba(15,23,42,0.24)]">
+            <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full border border-white/10" />
+            <div className="absolute -left-6 bottom-8 h-20 w-20 rounded-full bg-white/[0.03]" />
+            <div className="relative flex items-center justify-between border-b border-white/10 px-6 py-5">
+              <h2 className="flex items-center gap-2 text-lg font-semibold">
+                <Activity size={18} className="text-orange-400" />
+                Live Trigger Feed
               </h2>
-              <span className="text-xs font-mono bg-gray-800 border border-gray-700 text-gray-300 px-2 py-1 rounded flex items-center gap-2">
-                <Clock size={12} /> O(1) Dequeue Processing
+              <span className="flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-xs font-mono uppercase tracking-[0.16em] text-slate-200">
+                <Clock size={12} />
+                O(1) Dequeue
               </span>
             </div>
 
-            <div className="p-0 max-h-80 overflow-y-auto bg-gray-50">
+            <div className="relative max-h-96 overflow-y-auto bg-white/5">
               {triggeredFeed.length === 0 ? (
-                <div className="p-10 text-center text-gray-500 flex flex-col items-center">
-                  <BellRing size={32} className="text-gray-300 mb-3" />
-                  <p>
-                    Queue is empty. Waiting for price data to trigger alerts...
-                  </p>
-                  <p className="text-xs mt-2 text-gray-400">
-                    Go to the 'Ingestion' tab to add matching stock records.
-                  </p>
+                <div className="p-12 text-center text-slate-300">
+                  <BellRing size={32} className="mx-auto mb-3 text-slate-500" />
+                  <p>Queue is empty. Waiting for trigger events...</p>
                 </div>
               ) : (
-                <ul className="divide-y divide-gray-200">
+                <ul className="divide-y divide-white/10">
                   {triggeredFeed.map((trigger, idx) => (
                     <li
                       key={idx}
-                      className="p-4 hover:bg-orange-50/50 flex items-start gap-4 transition-colors animate-fade-in-up"
+                      className="flex items-start gap-4 px-6 py-4 transition hover:bg-white/5"
                     >
-                      <div className="bg-orange-100 p-2 rounded-full mt-0.5">
-                        <AlertTriangle size={18} className="text-orange-600" />
+                      <div className="rounded-full bg-orange-500/15 p-2">
+                        <AlertTriangle size={18} className="text-orange-400" />
                       </div>
                       <div className="flex-1">
-                        <p className="text-sm font-semibold text-gray-900">
+                        <p className="text-sm font-medium text-white">
                           {trigger.message}
                         </p>
-                        <p className="text-xs font-mono text-gray-500 mt-1">
+                        <p className="mt-1 text-xs font-mono text-slate-400">
                           {trigger.timestamp}
                         </p>
                       </div>
@@ -318,7 +367,24 @@ const AlertManagement = () => {
             </div>
           </div>
         </div>
-      </div>
+      </section>
+    </div>
+  );
+};
+
+const AlertBadge = ({ label, value, tone }) => {
+  const tones = {
+    amber: "bg-[#fff3e8] text-orange-900",
+    sky: "bg-[#eaf5ff] text-sky-900",
+    emerald: "bg-[#ecfff1] text-emerald-900",
+  };
+
+  return (
+    <div className={`rounded-[24px] px-5 py-4 shadow-sm ${tones[tone]}`}>
+      <p className="text-xs font-semibold uppercase tracking-[0.16em] opacity-60">
+        {label}
+      </p>
+      <p className="mt-1 text-lg font-bold">{value}</p>
     </div>
   );
 };
